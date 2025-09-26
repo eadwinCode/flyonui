@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [2.4.1] - [26-September-2025]
+
+## Added
+
+* **Dropdown**: `--mega-menu:{boolean}` ensures the Mega Menu remains fully visible on small screens without getting clipped.
+* **Advanced Select**: Added support for [Option disabled state](https://flyonui.com/docs/advanced-forms/advanced-select/#option-disabled) [FeatureReq #117].
+* **Tooltip**: Reintroduced `--interaction` for [Popover interaction](https://flyonui.com/docs/overlays/popover/#interaction) [Issue #117].
+
+## Fixes and Improvements
+
+* **Dropdown**:
+  * Fixed issue where the input element in the dropdown couldn't receive focus or allow typing. [Issue #118]
+  * Resolved placement issue. [Issue #114]
+  * Fixed non-functioning `OnEnter` behavior.
+* **Overlay**: Fixed issue with `data-overlay-keyboard="false"`. [Issue #116]
+* **Combo Box**: Fixed keyboard interaction for `Arrow`, `Home`, and `End` keys.
+
+
 ## [2.4.0] - [06-August-2025]
 
 ## Added

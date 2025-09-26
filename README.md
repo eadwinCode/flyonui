@@ -36,6 +36,7 @@ Created by [ThemeSelection](https://themeselection.com), with a commitment to em
 - [Getting Started 🏁](#getting-started-)
   - [Installation via NPM](#installation-via-npm)
   - [RTL (Right-to-Left) Language Support](#rtl-right-to-left-language-support)
+- [Star History 🌟](#star-history-)
 - [Available Components 🧩](#available-components-)
   - [Component Examples](#component-examples)
 - [Community 🤝](#community-)
@@ -224,7 +225,7 @@ To use FlyonUI, ensure that you have [Node.js](https://nodejs.org/en/) and [Tail
    @source "./node_modules/flyonui/dist/accordion.js";
    ```
 
-3. For enabling interactive components such as accordion, dropdown,    modal etc... , include FlyonUI's JavaScript in your HTML file, just before the closing `</body>` tag:
+3. For enabling interactive components such as accordion, dropdown, modal etc... , include FlyonUI's JavaScript in your HTML file, just before the closing `</body>` tag:
 
    ```html
    <script src="../node_modules/flyonui/flyonui.js"></script>

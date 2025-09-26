@@ -383,7 +383,6 @@ export declare class HSComboBox extends HSBasePlugin<IComboBoxOptions> implement
 	private appendItemsToWrapper;
 	private resultItems;
 	private destroyOutputPlaceholder;
-	private getPreparedItems;
 	private setHighlighted;
 	private setupAccessibility;
 	private onEnter;
@@ -1221,6 +1220,7 @@ export declare class HSTooltip extends HSBasePlugin<{}> implements ITooltip {
 	readonly eventMode: string;
 	private readonly preventFloatingUI;
 	private readonly placement;
+	private readonly interaction;
 	private readonly strategy;
 	private readonly scope;
 	cleanupAutoUpdate: (() => void) | null;

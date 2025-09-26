@@ -1,6 +1,6 @@
 /*
  * HSDropdown
- * @version: 3.2.2
+ * @version: 3.2.3
  * @author: Preline Labs Ltd.
  * @license: Licensed under MIT and Preline UI Fair Use License (https://preline.co/docs/license.html)
  * Copyright 2024 Preline Labs Ltd.
@@ -202,7 +202,24 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
     checkboxes.forEach((el: HTMLElement) => el.addEventListener('click', () => this.selectCheckbox(el)))
     radiobuttons.forEach((el: HTMLElement) => el.addEventListener('click', () => this.selectRadio(el)))
 
-    this.menu.addEventListener('click', () => {
+    this.menu.addEventListener('click', evt => {
+      const target = evt.target as HTMLElement
+
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'A' ||
+        target.closest('button') ||
+        target.closest('a') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('select')
+      ) {
+        return
+      }
+
       this.menu.focus()
     })
   }
@@ -254,9 +271,8 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
   }
 
   private onClickHandler(evt: Event) {
-    const currentTrigger = getClassProperty(this.el, '--trigger', 'click')
     const isMouseHoverTrigger =
-      currentTrigger === 'hover' &&
+      this.eventMode === 'hover' &&
       window.matchMedia('(hover: hover)').matches &&
       (evt as PointerEvent).pointerType === 'mouse'
 
@@ -282,8 +298,7 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
   }
 
   private onMouseEnterHandler() {
-    const currentTrigger = getClassProperty(this.el, '--trigger', 'click')
-    if (currentTrigger !== 'hover') return false
+    if (this.eventMode !== 'hover') return false
 
     if (!this.el._floatingUI || (this.el._floatingUI && !this.el.classList.contains('open'))) this.forceClearState()
 
@@ -293,8 +308,7 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
   }
 
   private onMouseLeaveHandler() {
-    const currentTrigger = getClassProperty(this.el, '--trigger', 'click')
-    if (currentTrigger !== 'hover') return false
+    if (this.eventMode !== 'hover') return false
 
     if (this.el.classList.contains('open') && !this.menu.classList.contains('hidden')) {
       this.close()
@@ -354,7 +368,7 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
     const offsetCss = (computedStyle.getPropertyValue('--offset') || '6').trim()
     const gpuAccelerationCss = (computedStyle.getPropertyValue('--gpu-acceleration') || 'true').trim()
     const adaptive = (window.getComputedStyle(this.el).getPropertyValue('--adaptive') || 'adaptive').replace(' ', '')
-
+    const isMegaMenu = (computedStyle.getPropertyValue('--mega-menu') || 'false').trim()
     const strategy = strategyCss as Strategy
     const offsetValue = parseInt(offsetCss, 10)
     const placement: Placement = POSITIONS[placementCss] || 'bottom-start'
@@ -385,7 +399,7 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
     const update = () => {
       computePosition(_target, this.menu, options).then(
         ({ x, y, placement: computedPlacement }: { x: number; y: number; placement: Placement }) => {
-          const adjustedX = checkSpaceAndAdjust(x)
+          const adjustedX = isMegaMenu === 'true' ? checkSpaceAndAdjust(x) : x
 
           if (strategy === 'absolute' && adaptive === 'none') {
             Object.assign(this.menu.style, {
@@ -750,7 +764,37 @@ class HSDropdown extends HSBasePlugin<{}, IHTMLElementFloatingUI> implements IDr
       this.el,
       {
         onEnter: () => {
-          if (!this.isOpened()) this.open(undefined, true)
+          const focusedEl = document.activeElement as HTMLElement
+          if (!this.isOpen()) {
+            // Legacy: Open if focused on toggle
+            if (focusedEl.closest('.dropdown-toggle')) {
+              this.open(undefined, true)
+              return
+            }
+          } else {
+            // If open, handle activation/selection on focused item
+            if (focusedEl.getAttribute('role') === 'menuitemcheckbox') {
+              this.selectCheckbox(focusedEl)
+              this.close()
+              return
+            } else if (focusedEl.getAttribute('role') === 'menuitemradio') {
+              this.selectRadio(focusedEl)
+              this.close()
+              return
+            } else if (
+              focusedEl.tagName === 'A' ||
+              focusedEl.tagName === 'BUTTON' ||
+              focusedEl.getAttribute('role')?.startsWith('menuitem')
+            ) {
+              // Simulate click to activate link/button/menuitem
+              focusedEl.click()
+              // Optionally close after activation (e.g., for links)
+              if (focusedEl.tagName === 'A' && focusedEl.hasAttribute('href')) {
+                setTimeout(() => this.close(), 0) // Delay to allow navigation
+              }
+              return
+            }
+          }
         },
         onSpace: () => {
           if (!this.isOpened()) this.open(undefined, true)

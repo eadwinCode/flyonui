@@ -1,6 +1,6 @@
 /*
  * HSTooltip
- * @version: 3.2.2
+ * @version: 3.2.3
  * @author: Preline Labs Ltd.
  * @license: Licensed under MIT and Preline UI Fair Use License (https://preline.co/docs/license.html)
  * Copyright 2024 Preline Labs Ltd.
@@ -22,6 +22,7 @@ class HSTooltip extends HSBasePlugin<{}> implements ITooltip {
   readonly eventMode: string
   private readonly preventFloatingUI: string
   private readonly placement: string
+  private readonly interaction: string
   private readonly strategy: Strategy
   private readonly scope: TTooltipOptionsScope
 
@@ -43,6 +44,7 @@ class HSTooltip extends HSBasePlugin<{}> implements ITooltip {
       this.eventMode = getClassProperty(this.el, '--trigger') || 'hover'
       this.preventFloatingUI = getClassProperty(this.el, '--prevent-popper', 'false')
       this.placement = getClassProperty(this.el, '--placement')
+      this.interaction = getClassProperty(this.el, '--interaction', 'false')
       this.strategy = getClassProperty(this.el, '--strategy') as Strategy
       this.scope = (getClassProperty(this.el, '--scope') as TTooltipOptionsScope) || 'parent'
     }
@@ -105,13 +107,29 @@ class HSTooltip extends HSBasePlugin<{}> implements ITooltip {
       this.hide()
     } else {
       this._show()
+      if (this.interaction === 'true') {
+        const handleClickInsidePopover = (event: MouseEvent) => {
+          if (this.content && this.content.contains(event.target as Node)) {
+            event.stopPropagation()
+          }
+        }
 
-      this.onToggleHandleListener = () => {
-        setTimeout(() => this.toggleHandle())
+        this.content?.addEventListener('click', handleClickInsidePopover)
+
+        const handleClickOutsidePopover = (event: MouseEvent) => {
+          if (!this.content?.contains(event.target as Node) && !this.el.contains(event.target as Node)) {
+            this.hide()
+          }
+        }
+        document.body.addEventListener('click', handleClickOutsidePopover)
+      } else {
+        this.onToggleHandleListener = () => {
+          setTimeout(() => this.toggleHandle())
+        }
+
+        this.toggle.addEventListener('click', this.onToggleHandleListener, true)
+        this.toggle.addEventListener('blur', this.onToggleHandleListener, true)
       }
-
-      this.toggle.addEventListener('click', this.onToggleHandleListener, true)
-      this.toggle.addEventListener('blur', this.onToggleHandleListener, true)
     }
   }
   private buildFloatingUI() {

@@ -5,6 +5,20 @@ class HSAccessibilityObserver {
   private currentlyOpenedComponents: IAccessibilityComponent[] = []
   private activeComponent: IAccessibilityComponent | null = null
 
+  private readonly allowedKeybindings = new Set([
+    'Escape',
+    'Enter',
+    ' ',
+    'Space',
+    'ArrowDown',
+    'ArrowUp',
+    'ArrowLeft',
+    'ArrowRight',
+    'Tab',
+    'Home',
+    'End'
+  ])
+
   constructor() {
     this.initGlobalListeners()
   }
@@ -13,6 +27,25 @@ class HSAccessibilityObserver {
     document.addEventListener('keydown', evt => this.handleGlobalKeydown(evt))
 
     document.addEventListener('focusin', evt => this.handleGlobalFocusin(evt))
+  }
+
+  private isAllowedKeybinding(evt: KeyboardEvent): boolean {
+    if (this.allowedKeybindings.has(evt.key)) {
+      return true
+    }
+
+    if (
+      evt.key.length === 1 &&
+      /^[a-zA-Z]$/.test(evt.key) &&
+      !evt.metaKey &&
+      !evt.ctrlKey &&
+      !evt.altKey &&
+      !evt.shiftKey
+    ) {
+      return true
+    }
+
+    return false
   }
 
   private getActiveComponent(el: HTMLElement) {
@@ -56,6 +89,10 @@ class HSAccessibilityObserver {
     this.activeComponent = this.getActiveComponent(target)
 
     if (!this.activeComponent) return
+
+    if (!this.isAllowedKeybinding(evt)) {
+      return
+    }
 
     switch (evt.key) {
       case 'Escape':
@@ -106,14 +143,12 @@ class HSAccessibilityObserver {
           evt.stopPropagation()
         }
         break
-      case 'Tab':
+      case 'Tab': {
         if (!this.activeComponent.handlers.onTab) break
-
         const handler = evt.shiftKey ? this.activeComponent.handlers.onShiftTab : this.activeComponent.handlers.onTab
-
         if (handler) handler()
-
         break
+      }
       case 'Home':
         if (this.activeComponent.handlers.onHome) {
           this.activeComponent.handlers.onHome()
@@ -129,6 +164,9 @@ class HSAccessibilityObserver {
         }
         break
       default:
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return
+        }
         if (this.activeComponent.handlers.onFirstLetter && evt.key.length === 1 && /^[a-zA-Z]$/.test(evt.key)) {
           this.activeComponent.handlers.onFirstLetter(evt.key)
           evt.preventDefault()
@@ -193,6 +231,18 @@ class HSAccessibilityObserver {
   public unregisterComponent(component: IAccessibilityComponent): void {
     this.components = this.components.filter(comp => comp !== component)
     this.currentlyOpenedComponents = this.currentlyOpenedComponents.filter(comp => comp !== component)
+  }
+
+  public addAllowedKeybinding(key: string): void {
+    this.allowedKeybindings.add(key)
+  }
+
+  public removeAllowedKeybinding(key: string): void {
+    this.allowedKeybindings.delete(key)
+  }
+
+  public getAllowedKeybindings(): string[] {
+    return Array.from(this.allowedKeybindings)
   }
 }
 

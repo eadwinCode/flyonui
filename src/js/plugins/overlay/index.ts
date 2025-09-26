@@ -1,6 +1,6 @@
 /*
  * HSOverlay
- * @version: 3.2.2
+ * @version: 3.2.3
  * @author: Preline Labs Ltd.
  * @license: Licensed under MIT and Preline UI Fair Use License (https://preline.co/docs/license.html)
  * Copyright 2024 Preline Labs Ltd.
@@ -670,7 +670,7 @@ class HSOverlay extends HSBasePlugin<{}> implements IOverlay {
           if (!this.isOpened()) this.open()
         },
         onEsc: () => {
-          if (this.isOpened()) {
+          if (this.isOpened() && this.hasAbilityToCloseOnBackdropClick) {
             this.close()
           }
         },
@@ -719,7 +719,7 @@ class HSOverlay extends HSBasePlugin<{}> implements IOverlay {
             if (!this.isOpened()) this.open()
           },
           onEsc: () => {
-            if (this.isOpened()) {
+            if (this.isOpened() && this.hasAbilityToCloseOnBackdropClick) {
               this.close()
             }
           }

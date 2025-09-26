@@ -30,4 +30,7 @@ export interface HSAccessibilityObserver {
     selector?: string,
     context?: HTMLElement
   ): IAccessibilityComponent
+  addAllowedKeybinding(key: string): void
+  removeAllowedKeybinding(key: string): void
+  getAllowedKeybindings(): string[]
 }

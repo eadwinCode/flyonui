@@ -1,12 +1,12 @@
 /*
  * HSComboBox
- * @version: 3.2.2
+ * @version: 3.2.3
  * @author: Preline Labs Ltd.
  * @license: Licensed under MIT and Preline UI Fair Use License (https://preline.co/docs/license.html)
  * Copyright 2024 Preline Labs Ltd.
  */
 
-import { afterTransition, debounce, dispatch, htmlToElement, isEnoughSpace } from '../../utils'
+import { afterTransition, debounce, dispatch, htmlToElement, isEnoughSpace, isParentOrElementHidden } from '../../utils'
 
 import { IComboBox, IComboBoxItemAttr, IComboBoxOptions } from './interfaces'
 
@@ -825,21 +825,6 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
     this.outputPlaceholder = null
   }
 
-  private getPreparedItems(isReversed = false, output: HTMLElement | null): Element[] | null {
-    if (!output) return null
-
-    const preparedItems = isReversed
-      ? Array.from(output.querySelectorAll(':scope > *:not(.--exclude-accessibility)'))
-          .filter(el => (el as HTMLElement).style.display !== 'none')
-          .reverse()
-      : Array.from(output.querySelectorAll(':scope > *:not(.--exclude-accessibility)')).filter(
-          el => (el as HTMLElement).style.display !== 'none'
-        )
-    const items = preparedItems.filter((el: any) => !el.classList.contains('disabled'))
-
-    return items
-  }
-
   private setHighlighted(prev: Element, current: HTMLElement, input: HTMLInputElement): void {
     current.focus()
 
@@ -866,12 +851,12 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
           }
         },
         onArrow: (evt: KeyboardEvent) => {
-          if (!this.isOpened && evt.key === 'ArrowDown') {
+          if (!this.isOpened && !this.preventVisibility && evt.key === 'ArrowDown') {
             this.open()
             return
           }
 
-          if (this.isOpened) {
+          if (this.isOpened || this.preventVisibility) {
             switch (evt.key) {
               case 'ArrowDown':
                 this.focusMenuItem('next')
@@ -887,11 +872,13 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
                 break
             }
           }
-        }
+        },
+        onEnd: () => this.onStartEnd(false),
+        onHome: () => this.onStartEnd(true)
         // onTab: () => this.onTab(),
         // onFirstLetter: (key: string) => this.onFirstLetter(key),
       },
-      this.isOpened,
+      this.isOpened || this.preventVisibility,
       'ComboBox',
       '[data-combo-box]',
       output
@@ -902,15 +889,33 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
     if (!this.isOpened) {
       this.open()
     } else {
-      const highlighted = this.output.querySelector('.combo-box-output-item-highlighted')
-      if (highlighted) {
-        this.close(
-          highlighted.querySelector('[data-combo-box-value]')?.getAttribute('data-combo-box-search-text') ?? null,
-          JSON.parse(highlighted.getAttribute('data-combo-box-item-stored-data')) ?? null
-        )
+      const target = document.activeElement as HTMLElement
+      const opened = window.$hsComboBoxCollection.find(
+        el => !isParentOrElementHidden(el.element.el) && target.closest('[data-combo-box]') === el.element.el
+      )
+      if (!opened) return
 
-        if (this.input) this.input.focus()
+      const link: HTMLAnchorElement = opened.element.el.querySelector('.combo-box-output-item-highlighted a')
+
+      if ((target as HTMLElement).hasAttribute('data-combo-box-input')) {
+        opened.element.close()
+        ;(target as HTMLInputElement).blur()
+      } else {
+        if (!opened.element.preventSelection) {
+          opened.element.setSelectedByValue(opened.element.valuesBySelector(target as HTMLElement))
+        }
+        if (opened.element.preventSelection && link) {
+          window.location.assign(link.getAttribute('href'))
+        }
+        opened.element.close(
+          !opened.element.preventSelection
+            ? (target as HTMLElement).querySelector('[data-combo-box-value]')?.textContent
+            : null,
+          JSON.parse((target as HTMLElement).getAttribute('data-combo-box-item-stored-data')) ?? null
+        )
       }
+
+      if (this.input) this.input.focus()
     }
   }
 
@@ -953,8 +958,8 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
     if (!options.length) return false
 
     const current = output.querySelector('.combo-box-output-item-highlighted')
-
-    this.setHighlighted(current, options[0] as HTMLButtonElement, this.input)
+    const targetIndex = isStart ? 0 : options.length - 1
+    this.setHighlighted(current, options[targetIndex] as HTMLButtonElement, this.input)
   }
 
   // Public methods
@@ -967,6 +972,11 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
       window.$hsComboBoxCollection.map(el => (el.element.isCurrent = false))
 
       this.isCurrent = true
+
+      // Update accessibility state for preventVisibility mode
+      if (this.preventVisibility && window.HSAccessibilityObserver && this.accessibilityComponent) {
+        window.HSAccessibilityObserver.updateComponentState(this.accessibilityComponent, true)
+      }
     }
   }
 
@@ -975,7 +985,15 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
 
     if (typeof val !== 'undefined') this.setValueAndOpen(val)
 
-    if (this.preventVisibility) return false
+    if (this.preventVisibility) {
+      this.isOpened = true
+
+      if (window.HSAccessibilityObserver && this.accessibilityComponent) {
+        window.HSAccessibilityObserver.updateComponentState(this.accessibilityComponent, true)
+      }
+
+      return false
+    }
 
     this.animationInProcess = true
 
@@ -1005,6 +1023,12 @@ class HSComboBox extends HSBasePlugin<IComboBoxOptions> implements IComboBox {
 
       if (this.input.value !== '') this.el.classList.add('has-value')
       else this.el.classList.remove('has-value')
+
+      this.isOpened = false
+
+      if (window.HSAccessibilityObserver && this.accessibilityComponent) {
+        window.HSAccessibilityObserver.updateComponentState(this.accessibilityComponent, false)
+      }
 
       return false
     }
